@@ -44,13 +44,14 @@ The pricing framework follows [Benth, Lange & Myklebust (2015), *Pricing and hed
 | [`bivariate.py`](src/quanto_energy/bivariate.py) | Vectorised bivariate normal CDF via Owen's T, accurate to 1e-12 and much faster than `scipy.stats.multivariate_normal` |
 | [`hedging.py`](src/quanto_energy/hedging.py) | Exact simulation of correlated futures paths; discrete delta hedging with tailed futures positions; three hedging strategies |
 | [`models.py`](src/quanto_energy/models.py) | Seasonal + Ornstein–Uhlenbeck (AR(1)) spot models for temperature and power; HDD/CDD indices; residual and month-by-month correlation |
+| [`autocallable.py`](src/quanto_energy/autocallable.py) | Monte Carlo pricer for (worst-of) autocallable notes: step-down autocall, coupon barrier with memory, knock-in put monitored at maturity, on observation dates or daily; quanto drift adjustment; seasoned notes; bump-and-reprice delta and vega |
 | [`data.py`](src/quanto_energy/data.py) | Loaders for Open-Meteo temperature (no key), ENTSO-E day-ahead prices (free key) and CSV files, with local caching |
 
 The closed form is derived step by step in [`docs/derivation.md`](docs/derivation.md). The derivation is independent of the paper and is cross-checked by the tests.
 
 ## Validation
 
-`pytest` runs 46 tests:
+`pytest` runs 56 tests:
 
 - The closed form matches Monte Carlo within 4 standard errors for every call/put combination and correlation.
 - At $\rho = 0$, the price reduces exactly to the product of two Black-76 prices.
@@ -59,6 +60,7 @@ The closed form is derived step by step in [`docs/derivation.md`](docs/derivatio
 - Simulated futures are martingales.
 - Hedge error converges as $1/\sqrt{n}$.
 - The spot-model fits recover known parameters from synthetic data.
+- The autocallable pricer matches closed forms in its limiting cases (European down-and-in put, digital coupon with and without quanto drift, certain early call).
 
 ## Quick start
 
@@ -79,6 +81,25 @@ sx, sy, rho = log_moments(ENERGY_VOL, TEMPERATURE_VOL, CROSS_BLM_NY, t=0.0, T=T,
 price = quanto_price(F_E=5.092, F_I=805, K_E=5.0, K_I=800, sigma_x=sx, sigma_y=sy, rho=rho)
 greeks = quanto_greeks(5.092, 805, 5.0, 800, sx, sy, rho)
 ```
+
+### Pricing an autocallable
+
+```python
+import numpy as np
+from quanto_energy import Autocallable, Market, autocallable_price_mc, autocallable_greeks
+
+# 3-year worst-of on two underlyings, quarterly observations, 2% coupon per quarter with memory,
+# autocall at 100%, coupon barrier 70%, daily-monitored 60% knock-in put
+note = Autocallable(observation_times=np.arange(1, 13) / 4, coupon=0.02, autocall_barrier=1.0,
+                    coupon_barrier=0.7, knock_in_barrier=0.6, knock_in_monitoring="daily")
+market = Market(spots=[100.0, 80.0], vols=[0.25, 0.30], correlation=0.6, rate=0.03, dividends=[0.01, 0.02],
+                fx_vols=[0.0, 0.10], fx_correlations=[0.0, -0.3])  # second asset is a quanto
+res = autocallable_price_mc(note, market, n_paths=200_000, seed=1)
+print(res.price, res.std_error, res.call_probabilities, res.expected_life)
+greeks = autocallable_greeks(note, market)
+```
+
+For a futures underlying set `dividends` equal to the asset's rate so its risk-neutral drift is zero.
 
 ### Calibrating on real European data
 
