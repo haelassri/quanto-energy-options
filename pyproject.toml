@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quanto-energy"
+version = "0.1.0"
+description = "Pricing and hedging of energy-temperature quanto options (Benth, Lange & Myklebust, 2015)"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Hamza El Assri" }]
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.10", "pandas>=2.0"]
+
+[project.optional-dependencies]
+data = ["entsoe-py>=0.6"]
+plots = ["matplotlib>=3.7"]
+dev = ["pytest>=7", "matplotlib>=3.7", "ruff>=0.4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
