@@ -101,6 +101,10 @@ This script fits seasonal OU models to Paris temperature, HDD and French day-ahe
 
 Benth, F. E., Lange, N., & Myklebust, T. Å. (2015). Pricing and hedging quanto options in energy markets. *Journal of Energy Markets*, 8(1), 1–35.
 
+## Acknowledgements
+
+This project was built with [Claude](https://claude.ai), Anthropic's AI assistant, which helped write the code, tests and documentation.
+
 ## License
 
 MIT
